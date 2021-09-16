@@ -1,13 +1,23 @@
 import WalletConnectProvider from "@walletconnect/web3-provider";
 //import Torus from "@toruslabs/torus-embed"
 import WalletLink from "walletlink";
-import { Alert, Button, Col, Menu, Row } from "antd";
+import { Alert, Button, Col, Menu, Row, List } from "antd";
 import "antd/dist/antd.css";
 import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Link, Route, Switch } from "react-router-dom";
 import Web3Modal from "web3modal";
 import "./App.css";
-import { Account, Contract, Faucet, GasGauge, Header, Ramp, ThemeSwitch } from "./components";
+import {
+  Account,
+  Address,
+  Balance,
+  Contract,
+  Faucet,
+  GasGauge,
+  Header,
+  Ramp,
+  ThemeSwitch,
+} from "./components";
 import { INFURA_ID, NETWORK, NETWORKS } from "./constants";
 import { Transactor } from "./helpers";
 import {
@@ -245,11 +255,49 @@ function App(props) {
     "0x34aA3F359A9D614239015126635CE7732c18fDF3",
   ]);
 
-  // keep track of a variable from the contract in the local React state:
-  const purpose = useContractReader(readContracts, "YourContract", "purpose");
+  //keep track of contract balance to know how much has been staked total:
+  const stakerContractBalance = useBalance(localProvider, readContracts && readContracts.Staker ? readContracts.Staker.address : null);
+  if(DEBUG) console.log("💵 stakerContractBalance", stakerContractBalance )
 
-  // 📟 Listen for broadcast events
-  const setPurposeEvents = useEventListener(readContracts, "YourContract", "SetPurpose", localProvider, 1);
+  //keep track of total 'threshold' needed of ETH
+  const threshold = useContractReader(readContracts,"Staker", "threshold" )
+  console.log("💵 threshold:",threshold)
+
+  // keep track of a variable from the contract in the local React state:
+  const balanceStaked = useContractReader(readContracts,"Staker", "balances",[ address ])
+  console.log("💸 balanceStaked:",balanceStaked)
+
+  //📟 Listen for broadcast events
+  const stakeEvents = useEventListener(readContracts, "Staker", "Stake", localProvider, 1);
+  console.log("📟 stake events:",stakeEvents)
+
+  // keep track of a variable from the contract in the local React state:
+  const timeLeft = useContractReader(readContracts,"Staker", "timeLeft")
+  console.log("⏳ timeLeft:",timeLeft)
+
+
+
+  const complete = useContractReader(readContracts,"ExampleExternalContract", "completed")
+  console.log("✅ complete:",complete)
+
+  const exampleExternalContractBalance = useBalance(localProvider, readContracts && readContracts.ExampleExternalContract ? readContracts.ExampleExternalContract.address : null);
+  if(DEBUG) console.log("💵 exampleExternalContractBalance", exampleExternalContractBalance )
+
+
+  let completeDisplay = ""
+  if(complete){
+    completeDisplay = (
+      <div style={{padding:64, backgroundColor:"#eeffef", fontWeight:"bolder"}}>
+        🚀 🎖 👩‍🚀  -  Staking App triggered `ExampleExternalContract` -- 🎉  🍾   🎊
+        <Balance
+          balance={exampleExternalContractBalance}
+          fontSize={64}
+        /> ETH staked!
+      </div>
+    )
+  }
+
+
 
   /*
   const addressFromENS = useResolveName(mainnetProvider, "austingriffith.eth");
@@ -443,6 +491,9 @@ function App(props) {
     );
   }
 
+
+
+
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
@@ -451,125 +502,123 @@ function App(props) {
       <BrowserRouter>
         <Menu style={{ textAlign: "center" }} selectedKeys={[route]} mode="horizontal">
           <Menu.Item key="/">
-            <Link
-              onClick={() => {
-                setRoute("/");
-              }}
-              to="/"
-            >
-              YourContract
-            </Link>
+            <Link onClick={()=>{setRoute("/")}} to="/">Staker UI</Link>
           </Menu.Item>
-          <Menu.Item key="/hints">
-            <Link
-              onClick={() => {
-                setRoute("/hints");
-              }}
-              to="/hints"
-            >
-              Hints
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/exampleui">
-            <Link
-              onClick={() => {
-                setRoute("/exampleui");
-              }}
-              to="/exampleui"
-            >
-              ExampleUI
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/mainnetdai">
-            <Link
-              onClick={() => {
-                setRoute("/mainnetdai");
-              }}
-              to="/mainnetdai"
-            >
-              Mainnet DAI
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/subgraph">
-            <Link
-              onClick={() => {
-                setRoute("/subgraph");
-              }}
-              to="/subgraph"
-            >
-              Subgraph
-            </Link>
+          <Menu.Item key="/contracts">
+            <Link onClick={()=>{setRoute("/contracts")}} to="/contracts">Debug Contracts</Link>
           </Menu.Item>
         </Menu>
 
         <Switch>
           <Route exact path="/">
+
+          {completeDisplay}
+
+          <div style={{padding:8,marginTop:32}}>
+            <div>Timeleft:</div>
+            {timeLeft && humanizeDuration(timeLeft.toNumber()*1000)}
+          </div>
+
+          <div style={{padding:8}}>
+            <div>Total staked:</div>
+            <Balance
+              balance={stakerContractBalance}
+              fontSize={64}
+            />/<Balance
+              balance={threshold}
+              fontSize={64}
+            />
+          </div>
+
+
+          <div style={{padding:8}}>
+            <div>You staked:</div>
+            <Balance
+              balance={balanceStaked}
+              fontSize={64}
+            />
+          </div>
+
+
+          <div style={{padding:8}}>
+            <Button type={"default"} onClick={()=>{
+              tx( writeContracts.Staker.execute() )
+            }}>📡  Execute!</Button>
+          </div>
+
+          <div style={{padding:8}}>
+            <Button type={"default"} onClick={()=>{
+              tx( writeContracts.Staker.withdraw( address ) )
+            }}>🏧  Withdraw</Button>
+          </div>
+
+          <div style={{padding:8}}>
+            <Button type={ balanceStaked ? "success" : "primary"} onClick={()=>{
+              tx( writeContracts.Staker.stake({value: parseEther("0.5")}) )
+            }}>🥩  Stake 0.5 ether!</Button>
+          </div>
+
+
+
             {/*
                 🎛 this scaffolding is full of commonly used components
                 this <Contract/> component will automatically parse your ABI
                 and give you a form to interact with it locally
             */}
 
+            <div style={{width:500, margin:"auto",marginTop:64}}>
+              <div>Stake Events:</div>
+              <List
+                dataSource={stakeEvents}
+                renderItem={(item) => {
+                  return (
+                    <List.Item key={item[0]+item[1]+item.blockNumber}>
+                      <Address
+                          value={item[0]}
+                          ensProvider={mainnetProvider}
+                          fontSize={16}
+                        /> =>
+                        <Balance
+                          balance={item[1]}
+
+                        />
+
+                    </List.Item>
+                  )
+                }}
+              />
+            </div>
+
+
+
+
+            { /* uncomment for a second contract:
             <Contract
-              name="YourContract"
+              name="SecondContract"
+              signer={userProvider.getSigner()}
+              provider={localProvider}
+              address={address}
+              blockExplorer={blockExplorer}
+              contractConfig={contractConfig}
+            />
+            */}
+          </Route>
+          <Route path="/contracts">
+            <Contract
+              name="Staker"
               signer={userSigner}
               provider={localProvider}
               address={address}
               blockExplorer={blockExplorer}
               contractConfig={contractConfig}
             />
-          </Route>
-          <Route path="/hints">
-            <Hints
-              address={address}
-              yourLocalBalance={yourLocalBalance}
-              mainnetProvider={mainnetProvider}
-              price={price}
-            />
-          </Route>
-          <Route path="/exampleui">
-            <ExampleUI
-              address={address}
-              userSigner={userSigner}
-              mainnetProvider={mainnetProvider}
-              localProvider={localProvider}
-              yourLocalBalance={yourLocalBalance}
-              price={price}
-              tx={tx}
-              writeContracts={writeContracts}
-              readContracts={readContracts}
-              purpose={purpose}
-              setPurposeEvents={setPurposeEvents}
-            />
-          </Route>
-          <Route path="/mainnetdai">
             <Contract
-              name="DAI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.DAI}
+              name="ExampleExternalContract"
               signer={userSigner}
-              provider={mainnetProvider}
+              provider={localProvider}
               address={address}
-              blockExplorer="https://etherscan.io/"
+              blockExplorer={blockExplorer}
               contractConfig={contractConfig}
-              chainId={1}
-            />
-            {/*
-            <Contract
-              name="UNI"
-              customContract={mainnetContracts && mainnetContracts.contracts && mainnetContracts.contracts.UNI}
-              signer={userSigner}
-              provider={mainnetProvider}
-              address={address}
-              blockExplorer="https://etherscan.io/"
-            />
-            */}
-          </Route>
-          <Route path="/subgraph">
-            <Subgraph
-              subgraphUri={props.subgraphUri}
-              tx={tx}
-              writeContracts={writeContracts}
-              mainnetProvider={mainnetProvider}
             />
           </Route>
         </Switch>
@@ -592,6 +641,14 @@ function App(props) {
         />
         {faucetHint}
       </div>
+
+      <div style={{marginTop:32,opacity:0.5}}>Created by <Address
+        value={"Your...address"}
+        ensProvider={mainnetProvider}
+        fontSize={16}
+      /></div>
+
+      <div style={{marginTop:32,opacity:0.5}}><a target="_blank" style={{padding:32,color:"#000"}} href="https://github.com/austintgriffith/scaffold-eth">🍴 Fork me!</a></div>
 
       {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
       <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
