@@ -27,6 +27,7 @@ import { useContractConfig } from "./hooks";
 import Portis from "@portis/web3";
 import Fortmatic from "fortmatic";
 import Authereum from "authereum";
+import humanizeDuration from "humanize-duration";
 
 const { ethers } = require("ethers");
 /*
@@ -508,7 +509,6 @@ function App(props) {
         <Switch>
           <Route exact path="/">
             {completeDisplay}
-
             <div style={{ padding: 8, marginTop: 32 }}>
               <div>Timeleft:</div>
               {timeLeft && humanizeDuration(timeLeft.toNumber() * 1000)}
@@ -539,7 +539,7 @@ function App(props) {
               <Button
                 type={"default"}
                 onClick={() => {
-                  tx(writeContracts.Staker.withdraw(address));
+                  tx(writeContracts.Staker.withdraw());
                 }}
               >
                 🏧 Withdraw
