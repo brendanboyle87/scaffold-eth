@@ -10,7 +10,9 @@ contract Staker {
 
     event Stake(address indexed sender, uint256 amount);
 
-    uint256 public deadline = block.timestamp + 60 seconds;
+    event Withdraw(address indexed sender, uint256 amount);
+
+    uint256 public deadline = block.timestamp + 5 days;
 
     modifier deadlineReached(bool requireReached) {
         uint256 timeRemaining = timeLeft();
@@ -78,6 +80,7 @@ contract Staker {
 
         (bool sent, ) = msg.sender.call{value: userBalance}("");
         require(sent, "Failed to send user balance back.");
+        emit Withdraw(msg.sender, userBalance);
     }
 
     // Add a `timeLeft()` view function that returns the time left before the deadline for the frontend

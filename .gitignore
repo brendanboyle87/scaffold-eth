@@ -64,3 +64,7 @@ yarn-error.log*
 .netlify
 *.tsbuildinfo
 *.stackdump
+
+0x2a0cc700fe5efcf03ec8497bdc1bccb959b77351.txt
+mnemonic.txt
+infura.txt

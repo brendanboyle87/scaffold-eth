@@ -1,6 +1,8 @@
+/* eslint-disable prettier/prettier */
 const { utils } = require("ethers");
 const fs = require("fs");
 const chalk = require("chalk");
+const { identical } = require("ramda");
 
 require("@nomiclabs/hardhat-waffle");
 require("@tenderly/hardhat-tenderly");
@@ -24,7 +26,7 @@ const { isAddress, getAddress, formatUnits, parseUnits } = utils;
 //
 // Select the network you want to deploy to here:
 //
-const defaultNetwork = "localhost";
+const defaultNetwork = "rinkeby";
 
 const mainnetGwei = 21;
 
@@ -39,6 +41,15 @@ function mnemonic() {
     }
   }
   return "";
+}
+
+function rinkebyProject() {
+  try {
+     const id = fs.readFileSync("./infura.txt").toString().trim();
+     return `https://rinkeby.infura.io/v3/${id}`
+  } catch (e) {
+    return "";
+  }
 }
 
 module.exports = {
@@ -59,7 +70,7 @@ module.exports = {
       */
     },
     rinkeby: {
-      url: "https://rinkeby.infura.io/v3/460f40a260564ac4a4f4b3fffb032dad", // <---- YOUR INFURA ID! (or it won't work)
+      url: rinkebyProject(), // <---- YOUR INFURA ID! (or it won't work)
 
        //    url: "https://speedy-nodes-nyc.moralis.io/XXXXXXXXXXXXXXXXXXXXXXX/eth/rinkeby", // <---- YOUR MORALIS ID! (not limited to infura)
 

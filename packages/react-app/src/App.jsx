@@ -1,7 +1,7 @@
 import WalletConnectProvider from "@walletconnect/web3-provider";
 //import Torus from "@toruslabs/torus-embed"
 import WalletLink from "walletlink";
-import { Alert, Button, Col, Menu, Row, List } from "antd";
+import { Alert, Button, Col, Menu, Row, List, Space } from "antd";
 import "antd/dist/antd.css";
 import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Link, Route, Switch } from "react-router-dom";
@@ -50,10 +50,10 @@ const { ethers } = require("ethers");
 */
 
 /// 📡 What chain are your contracts deployed to?
-const targetNetwork = NETWORKS.localhost; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
+const targetNetwork = NETWORKS.rinkeby; // <------- select your target frontend network (localhost, rinkeby, xdai, mainnet)
 
 // 😬 Sorry for all the console logging
-const DEBUG = true;
+const DEBUG = false;
 const NETWORKCHECK = true;
 
 // 🛰 providers
@@ -230,21 +230,6 @@ function App(props) {
   // If you want to make 🔐 write transactions to your contracts, use the userSigner:
   const writeContracts = useContractLoader(userSigner, contractConfig, localChainId);
 
-  // EXTERNAL CONTRACT EXAMPLE:
-  //
-  // If you want to bring in the mainnet DAI contract it would look like:
-  const mainnetContracts = useContractLoader(mainnetProvider, contractConfig);
-
-  // If you want to call a function on a new block
-  useOnBlock(mainnetProvider, () => {
-    console.log(`⛓ A new mainnet block is here: ${mainnetProvider._lastBlockNumber}`);
-  });
-
-  // Then read your DAI balance like:
-  const myMainnetDAIBalance = useContractReader(mainnetContracts, "DAI", "balanceOf", [
-    "0x34aA3F359A9D614239015126635CE7732c18fDF3",
-  ]);
-
   //keep track of contract balance to know how much has been staked total:
   const stakerContractBalance = useBalance(
     localProvider,
@@ -263,6 +248,9 @@ function App(props) {
   //📟 Listen for broadcast events
   const stakeEvents = useEventListener(readContracts, "Staker", "Stake", localProvider, 1);
   console.log("📟 stake events:", stakeEvents);
+
+  const withdrawEvents = useEventListener(readContracts, "Staker", "Withdraw", localProvider, 1);
+  console.log("📟 withdraw events:", withdrawEvents);
 
   // keep track of a variable from the contract in the local React state:
   const timeLeft = useContractReader(readContracts, "Staker", "timeLeft");
@@ -304,8 +292,7 @@ function App(props) {
       yourLocalBalance &&
       yourMainnetBalance &&
       readContracts &&
-      writeContracts &&
-      mainnetContracts
+      writeContracts
     ) {
       console.log("_____________________________________ 🏗 scaffold-eth _____________________________________");
       console.log("🌎 mainnetProvider", mainnetProvider);
@@ -315,7 +302,6 @@ function App(props) {
       console.log("💵 yourLocalBalance", yourLocalBalance ? ethers.utils.formatEther(yourLocalBalance) : "...");
       console.log("💵 yourMainnetBalance", yourMainnetBalance ? ethers.utils.formatEther(yourMainnetBalance) : "...");
       console.log("📝 readContracts", readContracts);
-      console.log("🌍 DAI contract on mainnet:", mainnetContracts);
       console.log("💵 yourMainnetDAIBalance", myMainnetDAIBalance);
       console.log("🔐 writeContracts", writeContracts);
     }
@@ -326,8 +312,7 @@ function App(props) {
     yourLocalBalance,
     yourMainnetBalance,
     readContracts,
-    writeContracts,
-    mainnetContracts,
+    writeContracts
   ]);
 
   let networkDisplay = "";
@@ -450,33 +435,6 @@ function App(props) {
   let faucetHint = "";
   const faucetAvailable = localProvider && localProvider.connection && targetNetwork.name.indexOf("local") !== -1;
 
-  const [faucetClicked, setFaucetClicked] = useState(false);
-  if (
-    !faucetClicked &&
-    localProvider &&
-    localProvider._network &&
-    localProvider._network.chainId === 31337 &&
-    yourLocalBalance &&
-    ethers.utils.formatEther(yourLocalBalance) <= 0
-  ) {
-    faucetHint = (
-      <div style={{ padding: 16 }}>
-        <Button
-          type="primary"
-          onClick={() => {
-            faucetTx({
-              to: address,
-              value: ethers.utils.parseEther("0.01"),
-            });
-            setFaucetClicked(true);
-          }}
-        >
-          💰 Grab funds from the faucet ⛽️
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="App">
       {/* ✏️ Edit the header and change the title to your project name */}
@@ -492,16 +450,6 @@ function App(props) {
               to="/"
             >
               Staker UI
-            </Link>
-          </Menu.Item>
-          <Menu.Item key="/contracts">
-            <Link
-              onClick={() => {
-                setRoute("/contracts");
-              }}
-              to="/contracts"
-            >
-              Debug Contracts
             </Link>
           </Menu.Item>
         </Menu>
@@ -524,88 +472,106 @@ function App(props) {
               <Balance balance={balanceStaked} fontSize={64} />
             </div>
 
-            <div style={{ padding: 8 }}>
-              <Button
-                type={"default"}
-                onClick={() => {
-                  tx(writeContracts.Staker.execute());
-                }}
-              >
-                📡 Execute!
-              </Button>
-            </div>
+            <Row>
+              <Col span={24}>
+                <Space>
+                  <Button
+                    type={balanceStaked ? "success" : "primary"}
+                    shape={"round"}
+                    onClick={() => {
+                      tx(writeContracts.Staker.stake({ value: ethers.utils.parseEther("0.1") }));
+                    }}
+                  >
+                    🥩 Stake 0.1 ether!
+                  </Button>
 
-            <div style={{ padding: 8 }}>
-              <Button
-                type={"default"}
-                onClick={() => {
-                  tx(writeContracts.Staker.withdraw());
-                }}
-              >
-                🏧 Withdraw
-              </Button>
-            </div>
+                  <Button
+                    type={balanceStaked ? "success" : "primary"}
+                    shape={"round"}
+                    onClick={() => {
+                      tx(writeContracts.Staker.stake({ value: ethers.utils.parseEther("0.5") }));
+                    }}
+                  >
+                    🥩 Stake 0.5 ether!
+                  </Button>
 
-            <div style={{ padding: 8 }}>
-              <Button
-                type={balanceStaked ? "success" : "primary"}
-                onClick={() => {
-                  tx(writeContracts.Staker.stake({ value: ethers.utils.parseEther("0.5") }));
-                }}
-              >
-                🥩 Stake 0.5 ether!
-              </Button>
-            </div>
+                  <Button
+                    type={balanceStaked ? "success" : "primary"}
+                    shape={"round"}
+                    onClick={() => {
+                      tx(writeContracts.Staker.stake({ value: ethers.utils.parseEther("1") }));
+                    }}
+                  >
+                    🥩 Stake 1 ether!
+                  </Button>
+                </Space>
+              </Col>
+            </Row>
 
-            {/*
-                🎛 this scaffolding is full of commonly used components
-                this <Contract/> component will automatically parse your ABI
-                and give you a form to interact with it locally
-            */}
+            <Row>
+              <Col span={24}>
+                <Space>
+                  <div style={{ padding: 8 }}>
+                    <Button
+                      type={"default"}
+                      shape={"round"}
+                      onClick={() => {
+                        tx(writeContracts.Staker.execute());
+                      }}
+                    >
+                      📡 Execute!
+                    </Button>
+                  </div>
 
-            <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
-              <div>Stake Events:</div>
-              <List
-                dataSource={stakeEvents}
-                renderItem={item => {
-                  return (
-                    <List.Item key={item[0] + item[1] + item.blockNumber}>
-                      <Address value={item[0]} ensProvider={mainnetProvider} fontSize={16} /> =>
-                      <Balance balance={item[1]} />
-                    </List.Item>
-                  );
-                }}
-              />
-            </div>
+                  <div style={{ padding: 8 }}>
+                    <Button
+                      type={"default"}
+                      shape={"round"}
+                      onClick={() => {
+                        tx(writeContracts.Staker.withdraw());
+                      }}
+                    >
+                      🏧 Withdraw
+                    </Button>
+                  </div>
+                </Space>
+              </Col>
+            </Row>
 
-            {/* uncomment for a second contract:
-            <Contract
-              name="SecondContract"
-              signer={userProvider.getSigner()}
-              provider={localProvider}
-              address={address}
-              blockExplorer={blockExplorer}
-              contractConfig={contractConfig}
-            />
-            */}
-          </Route>
-          <Route path="/contracts">
-            <Contract
-              name="Staker"
-              signer={userSigner}
-              provider={localProvider}
-              address={address}
-              blockExplorer={blockExplorer}
-              contractConfig={contractConfig}
-            />
-            <Contract
-              name="ExampleExternalContract"
-              signer={userSigner}
-              provider={localProvider}
-              address={address}
-              blockExplorer={blockExplorer}
-              contractConfig={contractConfig}
-            />
+            <Row>
+              <Col span={12}>
+                <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
+                  <div>Stake Events:</div>
+                  <List
+                    dataSource={stakeEvents}
+                    renderItem={item => {
+                      return (
+                        <List.Item key={item.transactionHash}>
+                          <Address value={item.args.sender} ensProvider={mainnetProvider} fontSize={16} /> =>
+                          <Balance balance={item.data} />
+                        </List.Item>
+                      );
+                    }}
+                  />
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
+                  <div>Withdraw Events:</div>
+                  <List
+                    dataSource={withdrawEvents}
+                    renderItem={item => {
+                      return (
+                        <List.Item key={item.transactionHash}>
+                          <Address value={item.args.sender} ensProvider={mainnetProvider} fontSize={16} /> =>
+                          <Balance balance={item.data} />
+                        </List.Item>
+                      );
+                    }}
+                  />
+                </div>
+              </Col>
+            </Row>
           </Route>
         </Switch>
       </BrowserRouter>
@@ -640,46 +606,6 @@ function App(props) {
         >
           🍴 Fork me!
         </a>
-      </div>
-
-      {/* 🗺 Extra UI like gas price, eth price, faucet, and support: */}
-      <div style={{ position: "fixed", textAlign: "left", left: 0, bottom: 20, padding: 10 }}>
-        <Row align="middle" gutter={[4, 4]}>
-          <Col span={8}>
-            <Ramp price={price} address={address} networks={NETWORKS} />
-          </Col>
-
-          <Col span={8} style={{ textAlign: "center", opacity: 0.8 }}>
-            <GasGauge gasPrice={gasPrice} />
-          </Col>
-          <Col span={8} style={{ textAlign: "center", opacity: 1 }}>
-            <Button
-              onClick={() => {
-                window.open("https://t.me/joinchat/KByvmRe5wkR-8F_zz6AjpA");
-              }}
-              size="large"
-              shape="round"
-            >
-              <span style={{ marginRight: 8 }} role="img" aria-label="support">
-                💬
-              </span>
-              Support
-            </Button>
-          </Col>
-        </Row>
-
-        <Row align="middle" gutter={[4, 4]}>
-          <Col span={24}>
-            {
-              /*  if the local provider has a signer, let's show the faucet:  */
-              faucetAvailable ? (
-                <Faucet localProvider={localProvider} price={price} ensProvider={mainnetProvider} />
-              ) : (
-                ""
-              )
-            }
-          </Col>
-        </Row>
       </div>
     </div>
   );
