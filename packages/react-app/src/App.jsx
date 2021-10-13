@@ -1,7 +1,7 @@
 import WalletConnectProvider from "@walletconnect/web3-provider";
 //import Torus from "@toruslabs/torus-embed"
 import WalletLink from "walletlink";
-import { Alert, Button, Card, Col, Divider, Input, List, Menu, Row } from "antd";
+import { Alert, Button, Card, Col, Divider, Input, List, Menu, Row, Space } from "antd";
 import "antd/dist/antd.css";
 import React, { useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Link, Route, Switch } from "react-router-dom";
@@ -485,15 +485,19 @@ function App(props) {
   console.log("📟 buyTokensEvents:", sellTokensEvents);
 
   const [tokenBuyAmount, setTokenBuyAmount] = useState();
+  const [tokenSellAmount, setTokenSellAmount] = useState();
 
   const ethCostToPurchaseTokens =
     tokenBuyAmount && tokensPerEth && ethers.utils.parseEther("" + tokenBuyAmount / parseFloat(tokensPerEth));
+  const ethRecievedForTokens =
+    tokenSellAmount && tokensPerEth && ethers.utils.parseEther("" + tokenSellAmount / parseFloat(tokensPerEth));
   console.log("ethCostToPurchaseTokens:", ethCostToPurchaseTokens);
 
   const [tokenSendToAddress, setTokenSendToAddress] = useState();
   const [tokenSendAmount, setTokenSendAmount] = useState();
 
   const [buying, setBuying] = useState();
+  const [selling, setSelling] = useState();
 
   let transferDisplay = "";
   if (yourTokenBalance) {
@@ -524,7 +528,9 @@ function App(props) {
             <Button
               type={"primary"}
               onClick={() => {
-                tx(writeContracts.YourToken.transfer(tokenSendToAddress, ethers.utils.parseEther("" + tokenSendAmount)));
+                tx(
+                  writeContracts.YourToken.transfer(tokenSendToAddress, ethers.utils.parseEther("" + tokenSendAmount)),
+                );
               }}
             >
               Send Tokens
@@ -566,92 +572,157 @@ function App(props) {
 
         <Switch>
           <Route exact path="/">
-            <div style={{ padding: 8, marginTop: 32, width: 300, margin: "auto" }}>
-              <Card title="Your Tokens" extra={<a href="#">code</a>}>
-                <div style={{ padding: 8 }}>
-                  <Balance balance={yourTokenBalance} fontSize={64} />
-                </div>
-              </Card>
-            </div>
-            {transferDisplay}
-            <Divider />
-            <div style={{ padding: 8, marginTop: 32, width: 300, margin: "auto" }}>
-              <Card title="Buy Tokens" extra={<a href="#">code</a>}>
-                <div style={{ padding: 8 }}>{tokensPerEth && tokensPerEth.toNumber()} tokens per ETH</div>
+            <Row>
+              <Col offset={2} span={8}>
+                <Space>
+                  <div style={{ padding: 8, marginTop: 32, width: 300, margin: "auto" }}>
+                    <Card title="Your Tokens" extra={<a href="#">code</a>}>
+                      <div style={{ padding: 8 }}>
+                        <Balance balance={yourTokenBalance} fontSize={64} />
+                      </div>
+                    </Card>
+                  </div>
+                </Space>
+              </Col>
+              <Col span={9}>
+                <Space>{transferDisplay}</Space>
+              </Col>
+            </Row>
+            <Row>
+              <Col offset={3} span={6}>
+                <Space>
+                  <div style={{ padding: 8, width: 300, margin: "auto" }}>
+                    <Card title="Buy Tokens" extra={<a href="#">code</a>}>
+                      <div style={{ padding: 8 }}>{tokensPerEth && tokensPerEth.toNumber()} tokens per ETH</div>
 
-                <div style={{ padding: 8 }}>
-                  <Input
-                    style={{ textAlign: "center" }}
-                    placeholder={"amount of tokens to buy"}
-                    value={tokenBuyAmount}
-                    onChange={e => {
-                      setTokenBuyAmount(e.target.value);
+                      <div style={{ padding: 8 }}>
+                        <Input
+                          style={{ textAlign: "center" }}
+                          placeholder={"amount of tokens to buy"}
+                          value={tokenBuyAmount}
+                          onChange={e => {
+                            setTokenBuyAmount(e.target.value);
+                          }}
+                        />
+                        <Balance balance={ethCostToPurchaseTokens} dollarMultiplier={price} />
+                      </div>
+
+                      <div style={{ padding: 8 }}>
+                        <Button
+                          type={"primary"}
+                          loading={buying}
+                          onClick={async () => {
+                            setBuying(true);
+                            await tx(writeContracts.Vendor.buyTokens({ value: ethCostToPurchaseTokens }));
+                            setBuying(false);
+                          }}
+                        >
+                          Buy Tokens
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
+                </Space>
+              </Col>
+              <Col span={9}>
+                <Space>
+                  <div style={{ padding: 8, width: 300, margin: "auto" }}>
+                    <Card title="Sell Tokens" extra={<a href="#">code</a>}>
+                      <div style={{ padding: 8 }}>{tokensPerEth && tokensPerEth.toNumber()} tokens per ETH</div>
+
+                      <div style={{ padding: 8 }}>
+                        <Input
+                          style={{ textAlign: "center" }}
+                          placeholder={"amount of tokens to sell"}
+                          value={tokenSellAmount}
+                          onChange={e => {
+                            setTokenSellAmount(e.target.value);
+                          }}
+                        />
+                        <Balance balance={ethRecievedForTokens} dollarMultiplier={price} />
+                      </div>
+
+                      <div style={{ padding: 8 }}>
+                        <Button
+                          type={"primary"}
+                          loading={selling}
+                          onClick={async () => {
+                            await tx(
+                              writeContracts.YourToken.approve(
+                                vendorAddress,
+                                ethers.utils.parseEther("" + tokenSellAmount),
+                              ),
+                            );
+                            setSelling(true);
+                            await tx(
+                              writeContracts.Vendor.sellTokens(ethers.utils.parseEther("" + tokenSellAmount)),
+                            );
+                            setSelling(false);
+                          }}
+                        >
+                          Sell Tokens
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
+                </Space>
+              </Col>
+              <Col>
+                <Row style={{ padding: 8 }}>
+                  <div style={{ padding: 8 }}>
+                    <div>Vendor Token Balance:</div>
+                    <Balance balance={vendorTokenBalance} fontSize={64} />
+                  </div>
+                </Row>
+                <Row style={{ padding: 8 }}>
+                  <div style={{ padding: 8 }}>
+                    <div>Vendor ETH Balance:</div>
+                    <Balance balance={vendorETHBalance} fontSize={64} /> ETH
+                  </div>
+                </Row>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={12}>
+                <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
+                  <div>Buy Token Events:</div>
+                  <List
+                    dataSource={buyTokensEvents}
+                    renderItem={item => {
+                      return (
+                        <List.Item key={item.blockNumber + item.blockHash}>
+                          <Address value={item.args[0]} ensProvider={mainnetProvider} fontSize={16} /> paid
+                          <Balance balance={item.args[1]} />
+                          ETH to get
+                          <Balance balance={item.args[2]} />
+                          Tokens
+                        </List.Item>
+                      );
                     }}
                   />
-                  <Balance balance={ethCostToPurchaseTokens} dollarMultiplier={price} />
                 </div>
+              </Col>
 
-                <div style={{ padding: 8 }}>
-                  <Button
-                    type={"primary"}
-                    loading={buying}
-                    onClick={async () => {
-                      setBuying(true);
-                      await tx(writeContracts.Vendor.buyTokens({ value: ethCostToPurchaseTokens }));
-                      setBuying(false);
+              <Col span={12}>
+                <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
+                  <div>Sell Token Events:</div>
+                  <List
+                    dataSource={sellTokensEvents}
+                    renderItem={item => {
+                      return (
+                        <List.Item key={item.blockNumber + item.blockHash}>
+                          <Address value={item.args[0]} ensProvider={mainnetProvider} fontSize={16} />
+                          ETH recieved
+                          <Balance balance={item.args[1]} />
+                          Tokens sold
+                          <Balance balance={item.args[2]} />
+                        </List.Item>
+                      );
                     }}
-                  >
-                    Buy Tokens
-                  </Button>
+                  />
                 </div>
-              </Card>
-            </div>
-
-            <div style={{ padding: 8, marginTop: 32 }}>
-              <div>Vendor Token Balance:</div>
-              <Balance balance={vendorTokenBalance} fontSize={64} />
-            </div>
-
-            <div style={{ padding: 8 }}>
-              <div>Vendor ETH Balance:</div>
-              <Balance balance={vendorETHBalance} fontSize={64} /> ETH
-            </div>
-
-            <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
-              <div>Buy Token Events:</div>
-              <List
-                dataSource={buyTokensEvents}
-                renderItem={item => {
-                  return (
-                    <List.Item key={item.blockNumber + item.blockHash}>
-                      <Address value={item.args[0]} ensProvider={mainnetProvider} fontSize={16} /> paid
-                      <Balance balance={item.args[1]} />
-                      ETH to get
-                      <Balance balance={item.args[2]} />
-                      Tokens
-                    </List.Item>
-                  );
-                }}
-              />
-            </div>
-
-            <div style={{ width: 500, margin: "auto", marginTop: 64 }}>
-              <div>Sell Token Events:</div>
-              <List
-                dataSource={sellTokensEvents}
-                renderItem={item => {
-                  return (
-                    <List.Item key={item.blockNumber + item.blockHash}>
-                      <Address value={item.args[0]} ensProvider={mainnetProvider} fontSize={16} /> paid
-                      <Balance balance={item.args[1]} />
-                      ETH recieved
-                      <Balance balance={item.args[2]} />
-                      Tokens
-                    </List.Item>
-                  );
-                }}
-              />
-            </div>
+              </Col>
+            </Row>
 
             {/*
 
