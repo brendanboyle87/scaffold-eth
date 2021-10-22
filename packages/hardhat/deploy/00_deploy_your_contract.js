@@ -21,9 +21,18 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     log: true,
   });
 
+  const dex = await ethers.getContract("DEX", deployer);
+
   
   // paste in your address here to get 10 balloons on deploy:
-  // await balloons.transfer("YOUR_ADDRESS",""+(10*10**18));
+  await balloons.transfer("0x0d354079b4b10f9f7dd9D61ae02570C135f84c77",""+(10*10**18));
+
+  
+  // uncomment to init DEX on deploy:
+  console.log("Approving DEX ("+dex.address+") to take Balloons from main account...")
+  await balloons.approve(dex.address,ethers.utils.parseEther('100'))
+  console.log("INIT exchange...")
+  await dex.init(ethers.utils.parseEther('5'),{value:ethers.utils.parseEther('5')})
 
 };
 module.exports.tags = ["YourContract"];
