@@ -148,7 +148,8 @@ export default function Curve(props) {
       <canvas
         style={{position:'absolute',left:0,top:0}}
         ref={ref}
-        {...props}
+        width={props.width}
+        height={props.height}
       />
       <div style={{position:'absolute',left:"20%",bottom:-20}}>
         -- ETH Reserve -->

@@ -77,14 +77,13 @@ export default function Dex(props) {
           console.log("valueInEther",valueInEther)
           let allowance =  await props.readContracts[tokenName].allowance(props.address,props.readContracts[contractName].address)
           console.log("allowance",allowance)
-          let nonce = await props.injectedProvider.getTransactionCount(props.address)
-          console.log("nonce",nonce)
-          let approveTx
+
+          let approveTx;
           if(allowance.lt(valueInEther)){
-            approveTx = tx( writeContracts[tokenName].approve(props.readContracts[contractName].address,valueInEther,{gasLimit:200000 , nonce:nonce++}) )
-            console.log("approve tx is in, not waiting on it though...",approveTx)
+            approveTx = await tx( writeContracts[tokenName].approve(props.readContracts[contractName].address,valueInEther,{gasLimit:200000}) );
           }
-          let swapTx = tx( writeContracts[contractName]["tokenToEth"](valueInEther,{gasLimit:200000, nonce:nonce++}) )
+
+          let swapTx = tx( writeContracts[contractName]["tokenToEth"](valueInEther,{gasLimit:200000}) )
           if(approveTx){
             console.log("waiting on approve to finish...")
             let approveTxResult = await approveTx;
@@ -102,21 +101,10 @@ export default function Dex(props) {
           console.log("valuePlusExtra",valuePlusExtra)
           let allowance =  await props.readContracts[tokenName].allowance(props.address,props.readContracts[contractName].address)
           console.log("allowance",allowance)
-          let nonce = await props.injectedProvider.getTransactionCount(props.address)
-          console.log("nonce",nonce)
-          let approveTx
           if(allowance.lt(valuePlusExtra)){
-            approveTx = tx( writeContracts[tokenName].approve(props.readContracts[contractName].address,valuePlusExtra,{gasLimit:200000 , nonce:nonce++}) )
-            console.log("approve tx is in, not waiting on it though...",approveTx)
+            await tx( writeContracts[tokenName].approve(props.readContracts[contractName].address,valuePlusExtra,{gasLimit:200000}) )
           }
-          let depositTx = tx( writeContracts[contractName]["deposit"]({value: valueInEther, gasLimit:200000, nonce:nonce++}) )
-          if(approveTx){
-            console.log("waiting on approve to finish...")
-            let approveTxResult = await approveTx;
-            console.log("approveTxResult:",approveTxResult)
-          }
-          let depositTxResult = await depositTx;
-          console.log("depositTxResult:",depositTxResult)
+          await tx( writeContracts[contractName]["deposit"]({value: valueInEther, gasLimit:200000}) )
         })}
 
         {rowForm("withdraw","📤",async (value)=>{
@@ -149,7 +137,7 @@ export default function Dex(props) {
     <Row span={12}>
     <Contract
               name="Balloons"
-              signer={props.userSigner}
+              signer={props.signer}
               provider={props.localProvider}
               show={["balanceOf","approve"]}
               address={props.address}
