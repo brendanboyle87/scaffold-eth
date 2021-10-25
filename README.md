@@ -39,40 +39,41 @@ Navigate to the Debug Contracts tab and you should see two smart contracts displ
 
 We want to create an automatic market where our contract will hold reserves of both ETH and 🎈Balloons. These reserves will provide liquidity that allows anyone to swap between the assets. Let’s add a couple new variables to `DEX.sol`:
 
-```uint256 public totalLiquidity;
-mapping (address => uint256) public liquidity;```
+`uint256 public totalLiquidity;
+mapping (address => uint256) public liquidity;`
 
 These variables track the total liquidity, but also by individual addresses too.
 Then, let’s create an init() function in `DEX.sol` that is payable and then we can define an amount of tokens that it will transfer to itself:
 
-```function init(uint256 tokens) public payable returns (uint256) {
+`
+function init(uint256 tokens) public payable returns (uint256) {
   require(totalLiquidity==0,"DEX:init - already has liquidity");
   totalLiquidity = address(this).balance;
   liquidity[msg.sender] = totalLiquidity;
   require(token.transferFrom(msg.sender, address(this), tokens));
   return totalLiquidity;
-}```
+}`
 
 Calling init() will load our contract up with both ETH and 🎈Balloons. 
 
 We can see that the DEX starts empty. We want to be able to call init() to start it off with liquidity, but we don’t have any funds or tokens yet. Add some ETH to your local account using the faucet and then find the `00_deploy_your_conract.js` file. Uncomment the below and add your adddress: 
 
-```
+`
   // paste in your address here to get 10 balloons on deploy:
   // await balloons.transfer("YOUR_ADDRESS",""+(10*10**18));
-```
+`
 Run `yarn deploy`. The front end should show you you have balloon tokens. We can’t just call init() yet because the DEX contract isn’t allowed to transfer tokens from our account. We need to approve() the DEX contract with the Balloons UI. Copy and paste the DEX address and then set the amount to 5000000000000000000 (5 * 10¹⁸). You can confirm this worked using the allowance function. Now we are ready to call init() on the DEX. We will tell it to take 5 (*10¹⁸) of our tokens and we will also send 0.01 ETH with the transaction. You can see the DEX contract's value update and you can check the DEX token balance using the balanceOf function on the Balloons UI. 
 
 This works pretty well, but it will be a lot easier if we just call the init() function as we deploy the contract. In the `00_deploy_your_conract.js` script try uncommenting the init section so our DEX will start with 3 ETH and 3 Balloons of liquidity:
 
-```
+`
   // uncomment to init DEX on deploy:
   // console.log("Approving DEX ("+dex.address+") to take Balloons from main account...")
   // If you are going to the testnet make sure your deployer account has enough ETH
   // await balloons.approve(dex.address,ethers.utils.parseEther('100'));
   // // console.log("INIT exchange...")
   // await dex.init(""+(3*10**18),{value:ethers.utils.parseEther('3'),gasLimit:200000})
-```
+`
 
 Now when we `yarn deploy` reset our contract should be initialized as soon as it deploys and we should have equal reserves of ETH and tokens.
 
@@ -84,7 +85,7 @@ Follow along with the [original tutorial](https://medium.com/@austin_48503/%EF%B
 
 Let’s edit the DEX.sol smart contract and add two new functions for swapping from each asset to the other:
 
-``` 
+`
 function ethToToken() public payable returns (uint256) {
   uint256 token_reserve = token.balanceOf(address(this));
   uint256 tokens_bought = price(msg.value, address(this).balance.sub(msg.value), token_reserve);
@@ -101,7 +102,7 @@ function tokenToEth(uint256 tokens) public returns (uint256) {
   return eth_bought;
 }
 
-```
+`
 
 Each of these functions calculate the resulting amount of output asset using our price function that looks at the ratio of the reserves vs the input asset.We can call tokenToEth and it will take our tokens and send us ETH or we can call ethToToken with some ETH in the transaction and it will send us tokens. Let’s deploy our contract then move over to the frontend. Exchange some ETH for tokens and some tokens for ETH!
 
@@ -110,7 +111,7 @@ Each of these functions calculate the resulting amount of output asset using our
 So far, only the init() function controls liquidity. To make this more decentralized, it would be better if anyone could add to the liquidity pool by sending the DEX both ETH and tokens at the correct ratio.
 Let’s create two new functions that let us deposit and withdraw liquidity:
 
-``` 
+` 
 function deposit() public payable returns (uint256) {
   uint256 eth_reserve = address(this).balance.sub(msg.value);
   uint256 token_reserve = token.balanceOf(address(this));
@@ -134,7 +135,7 @@ function withdraw(uint256 amount) public returns (uint256, uint256) {
   return (eth_amount, token_amount);
 }
 
-```
+`
 
 Take a second to understand what these functions are doing after you paste them into DEX.sol in packages/buidler/contracts:
 The deposit() function receives ETH and also transfers tokens from the caller to the contract at the right ratio. The contract also tracks the amount of liquidity the depositing address owns vs the totalLiquidity.
@@ -160,7 +161,7 @@ Uncomment the Dex Component and the slimmed down Baloons component to load the t
 
 👮 Your token contract source needs to be **verified**... (source code publicly available on the block explorer)
 
-📠 You can add 
+📠 You can verify on etherscan by updating the etherscan-verify command in the hardhat package with your api key. 
 
 
 ### Checkpoint 5: 🚢 Ship it! 🚁
