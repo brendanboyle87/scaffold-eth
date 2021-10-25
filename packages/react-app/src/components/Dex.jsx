@@ -104,7 +104,7 @@ export default function Dex(props) {
           if(allowance.lt(valuePlusExtra)){
             await tx( writeContracts[tokenName].approve(props.readContracts[contractName].address,valuePlusExtra,{gasLimit:200000}) )
           }
-          await tx( writeContracts[contractName]["deposit"]({value: valueInEther, gasLimit:200000}) )
+          await tx( writeContracts[contractName]["deposit"]({value: valueInEther, gasLimit:200000}) );
         })}
 
         {rowForm("withdraw","📤",async (value)=>{
@@ -148,8 +148,7 @@ export default function Dex(props) {
     
     </Col>      
     <Col span={12}>
-    <Row span={6}>
-    <div style={{position:"fixed",right:70,top:50,padding:10}}>
+    <div style={{padding:20}}>
         <Curve
           addingEth={values && values["ethToToken"]?values["ethToToken"]:0}
           addingToken={values && values["tokenToEth"]?values["tokenToEth"]:0}
@@ -158,7 +157,6 @@ export default function Dex(props) {
           width={500} height={500}
         />
       </div>
-    </Row>
     </Col>      
     </Row>
   );

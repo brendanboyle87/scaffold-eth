@@ -144,7 +144,7 @@ export default function Curve(props) {
   },[props]);
 
   return (
-    <div style={{margin:32,position:'relative',width:props.width,height:props.height}}>
+    <div style={{position:'relative',width:props.width,height:props.height}}>
       <canvas
         style={{position:'absolute',left:0,top:0}}
         ref={ref}
