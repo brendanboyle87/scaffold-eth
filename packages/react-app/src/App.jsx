@@ -490,7 +490,7 @@ function App(props) {
 
           <Route path="/contracts">
             <Contract
-              name="Dex"
+              name="DEX"
               signer={userSigner}
               provider={localProvider}
               address={address}
